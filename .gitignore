@@ -1,0 +1,11 @@
+node_modules/
+dist/
+server/.venv/
+*.log
+.DS_Store
+
+# Testing (kept locally, not published)
+test/
+**/*.test.ts
+vitest.config.ts
+vitest.eval.config.ts

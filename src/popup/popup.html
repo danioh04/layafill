@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>layafill</title>
+    <link rel="stylesheet" href="../styles/shared.css" />
+    <style>
+      body {
+        width: 300px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      #fill-btn {
+        width: 100%;
+        padding: 9px;
+      }
+      #server {
+        font-size: 12px;
+      }
+      #result:empty,
+      #profile-warning[hidden] {
+        display: none;
+      }
+      footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+      }
+      .legend {
+        font-size: 12px;
+        display: flex;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>layafill</h1>
+      <span class="muted">Alt+Shift+F</span>
+    </header>
+    <div id="server" class="muted"><span id="server-dot" class="dot"></span><span id="server-text">Checking Laya…</span></div>
+    <p id="profile-warning" class="status" data-kind="warn" hidden>Your profile is empty. Add your details first.</p>
+    <button id="fill-btn" class="primary">Fill this page</button>
+    <p id="result" class="status"></p>
+    <div class="legend muted">
+      <span><span class="dot" data-kind="ok"></span>rules</span>
+      <span><span class="dot" style="background: #2563eb"></span>Laya</span>
+      <span><span class="dot" data-kind="warn"></span>needs you</span>
+    </div>
+    <footer>
+      <a href="#" id="settings-link">Profile &amp; settings</a>
+      <a href="#" id="debug-link">Export page debug</a>
+    </footer>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>layafill Settings</title>
+    <link rel="stylesheet" href="../styles/shared.css" />
+    <style>
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px 16px 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      section {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+      }
+      .wide {
+        grid-column: 1 / -1;
+      }
+      .entry {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .entry-header,
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .entry-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .entry-actions button {
+        padding: 3px 8px;
+        font-size: 12px;
+      }
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+      .savebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+        padding: 10px 16px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        align-items: center;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>layafill</h1>
+        <p class="muted">
+          Your profile stays in this browser. Only field labels are sent to your local Laya server, never your details
+          (except a dropdown answer when layafill needs Laya to pick the matching option).
+        </p>
+      </header>
+
+      <section>
+        <h2>Personal</h2>
+        <div class="grid">
+          <label>First name <input data-field="firstName" autocomplete="off" /></label>
+          <label>Middle name <input data-field="middleName" autocomplete="off" /></label>
+          <label>Last name <input data-field="lastName" autocomplete="off" /></label>
+          <label>Preferred name <input data-field="preferredName" autocomplete="off" /></label>
+          <label>Email <input data-field="email" type="email" autocomplete="off" /></label>
+          <label>Phone <input data-field="phone" type="tel" autocomplete="off" /></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Address</h2>
+        <div class="grid">
+          <label class="wide">Street address <input data-field="address.line1" autocomplete="off" /></label>
+          <label>Apt / suite <input data-field="address.line2" autocomplete="off" /></label>
+          <label>City <input data-field="address.city" autocomplete="off" /></label>
+          <label>State <input data-field="address.state" placeholder="CA or California" autocomplete="off" /></label>
+          <label>ZIP / postal code <input data-field="address.postalCode" autocomplete="off" /></label>
+          <label>Country <input data-field="address.country" placeholder="United States" autocomplete="off" /></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Links</h2>
+        <div class="grid">
+          <label>LinkedIn <input data-field="links.linkedin" type="url" autocomplete="off" /></label>
+          <label>GitHub <input data-field="links.github" type="url" autocomplete="off" /></label>
+          <label>Website / portfolio <input data-field="links.portfolio" type="url" autocomplete="off" /></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Education</h2>
+          <button id="add-education">Add school</button>
+        </div>
+        <p class="muted">Most recent first. The first entry fills single-school forms.</p>
+        <div id="education"></div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Experience</h2>
+          <button id="add-experience">Add job</button>
+        </div>
+        <p class="muted">Most recent first. The first entry fills "Current company" fields.</p>
+        <div id="experience"></div>
+      </section>
+
+      <section>
+        <h2>Laya server</h2>
+        <div class="grid">
+          <label class="wide">Server URL <input id="serverUrl" placeholder="http://127.0.0.1:8000" /></label>
+          <label>API key (optional) <input id="apiKey" type="password" autocomplete="off" /></label>
+          <label
+            >Model
+            <select id="model" title="Pick a specific model only if the server was started with it">
+              <option value="">Whatever the server loaded (recommended)</option>
+              <option value="typed-decisions">typed-decisions</option>
+              <option value="english">english</option>
+              <option value="multilingual">multilingual</option>
+            </select>
+          </label>
+          <label
+            >Confidence threshold (0–1)
+            <input id="threshold" type="number" min="0" max="1" step="0.05" title="Higher = fewer wrong fills, more fields left for you" />
+          </label>
+        </div>
+        <label class="inline"><input id="useLaya" type="checkbox" /> Use Laya for fields the rules can't place</label>
+        <label class="inline"><input id="overwrite" type="checkbox" /> Overwrite fields that already have a value</label>
+        <div class="row">
+          <button id="test-connection">Test connection</button>
+          <span id="connection-status" class="status"></span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Backup</h2>
+        <div class="row">
+          <button id="export">Export profile JSON</button>
+          <button id="import">Import profile JSON</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
+    </main>
+
+    <div class="savebar">
+      <button id="save" class="primary">Save</button>
+      <span id="save-status" class="status"></span>
+    </div>
+
+    <template id="education-template">
+      <div class="entry">
+        <div class="entry-header">
+          <strong class="entry-title">School</strong>
+          <div class="entry-actions">
+            <button data-action="up" title="Move up">↑</button>
+            <button data-action="down" title="Move down">↓</button>
+            <button data-action="remove">Remove</button>
+          </div>
+        </div>
+        <div class="grid">
+          <label class="wide">School <input data-entry="school" autocomplete="off" /></label>
+          <label>Degree <input data-entry="degree" placeholder="Bachelor of Science" autocomplete="off" /></label>
+          <label>Major <input data-entry="major" placeholder="Computer Science" autocomplete="off" /></label>
+          <label>GPA <input data-entry="gpa" autocomplete="off" /></label>
+          <label>Start date <input data-entry="start" type="date" /></label>
+          <label>End / expected graduation date <input data-entry="end" type="date" /></label>
+        </div>
+      </div>
+    </template>
+
+    <template id="experience-template">
+      <div class="entry">
+        <div class="entry-header">
+          <strong class="entry-title">Job</strong>
+          <div class="entry-actions">
+            <button data-action="up" title="Move up">↑</button>
+            <button data-action="down" title="Move down">↓</button>
+            <button data-action="remove">Remove</button>
+          </div>
+        </div>
+        <div class="grid">
+          <label>Company <input data-entry="company" autocomplete="off" /></label>
+          <label>Title <input data-entry="title" autocomplete="off" /></label>
+          <label>Location <input data-entry="location" placeholder="City, ST" autocomplete="off" /></label>
+          <label>Start date <input data-entry="start" type="date" /></label>
+          <label>End date <input data-entry="end" type="date" /></label>
+          <label class="inline"><input data-entry="current" type="checkbox" /> I currently work here</label>
+          <label class="wide">Description <textarea data-entry="description"></textarea></label>
+        </div>
+      </div>
+    </template>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

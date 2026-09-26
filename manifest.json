@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "layafill",
+  "version": "0.1.0",
+  "description": "Fill job applications from your profile. Uses a local Laya model; never submits.",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "layafill"
+  },
+  "options_page": "src/options/options.html",
+  "commands": {
+    "fill-page": {
+      "suggested_key": { "default": "Alt+Shift+F" },
+      "description": "Fill the job application on this page"
+    }
+  }
+}
