@@ -133,11 +133,11 @@ export async function classifyFields(settings: LayaSettings, fields: FieldContex
 
 export async function matchOption(
   settings: LayaSettings,
-  value: string,
-  label: string,
+  about: string,
+  question: string,
   options: string[],
 ): Promise<{ index: number | null; confidence: number }> {
   settings = await resolveModel(settings);
-  const response = await postSystemOne(settings, buildOptionRequest(value, label, options, settings.model));
+  const response = await postSystemOne(settings, buildOptionRequest(about, question, options, settings.model));
   return parseOptionResponse(response, settings.threshold);
 }

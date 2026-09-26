@@ -1,4 +1,5 @@
-import { KEYS, LAYA_KEYS, OTHER_DESCRIPTION } from "../profile/keys";
+import { KEYS, LAYA_ANSWER_KEYS, LAYA_KEYS, OTHER_ANSWER_DESCRIPTION, OTHER_DESCRIPTION } from "../profile/keys";
+import { isYesNoOptions } from "./rules";
 import { normalize } from "../scan/text";
 import type { Decision, FieldContext, FieldKey } from "../types";
 
@@ -57,21 +58,31 @@ export function buildFieldState(ctx: FieldContext): string {
   return clip(lines.join("\n"), MAX_STATE_CHARS);
 }
 
-/** One choice question over the profile keys Laya may pick, plus "other". */
-export function buildFieldQuestions(): Record<string, LayaChoiceQuestion> {
-  const criteria: Record<string, string> = Object.fromEntries(LAYA_KEYS.map((key) => [key, KEYS[key].description]));
-  criteria.other = OTHER_DESCRIPTION;
+function choiceQuestion(instructions: string, keys: FieldKey[], other: string): LayaChoiceQuestion {
+  const criteria: Record<string, string> = Object.fromEntries(keys.map((key) => [key, KEYS[key].description]));
+  criteria.other = other;
+  return { type: "choice", instructions, criteria };
+}
+
+/**
+ * Two choice questions answered in one pass: which profile detail the field asks for,
+ * and which application question it is. Yes/no fields only get the second.
+ */
+export function buildFieldQuestions(ctx?: FieldContext): Record<string, LayaChoiceQuestion> {
+  const question = choiceQuestion(
+    "Which application question is this?",
+    LAYA_ANSWER_KEYS,
+    OTHER_ANSWER_DESCRIPTION,
+  );
+  if (ctx && isYesNoOptions(ctx.options)) return { question };
   return {
-    field: {
-      type: "choice",
-      instructions: "What does this job application form field ask for?",
-      criteria,
-    },
+    field: choiceQuestion("What does this job application form field ask for?", LAYA_KEYS, OTHER_DESCRIPTION),
+    question,
   };
 }
 
 export function buildFieldRequest(ctx: FieldContext, model: string): LayaRequest {
-  const request: LayaRequest = { state: buildFieldState(ctx), questions: buildFieldQuestions() };
+  const request: LayaRequest = { state: buildFieldState(ctx), questions: buildFieldQuestions(ctx) };
   if (model) request.model = model;
   return request;
 }
@@ -98,29 +109,42 @@ export function parseFieldResponse(
   response: LayaResponse,
   threshold: number,
 ): Decision {
-  const { choice, probability } = topChoice(response.answers?.field);
-  const none = (reason: string): Decision => ({ fieldId, key: null, source: "laya", confidence: probability, reason });
+  const answers = response.answers ?? {};
+  // The more confident of the two questions wins, ignoring "other" and unknown labels.
+  const candidates = [
+    { ...topChoice(answers.field), allowed: LAYA_KEYS },
+    { ...topChoice(answers.question), allowed: LAYA_ANSWER_KEYS },
+  ]
+    .filter((c) => c.choice && c.choice !== "other" && (c.allowed as string[]).includes(c.choice))
+    .sort((a, b) => b.probability - a.probability);
+  const best = candidates[0];
+  const none = (reason: string, confidence = 0): Decision => ({ fieldId, key: null, source: "laya", confidence, reason });
 
-  if (!choice) return none("laya:no-answer");
-  if (choice === "other") return none("laya:other");
-  if (!(LAYA_KEYS as string[]).includes(choice)) return none(`laya:unknown:${choice}`);
-  if (probability < threshold) return none(`laya:unsure:${choice}`);
-  return { fieldId, key: choice as FieldKey, source: "laya", confidence: probability, reason: `laya:${choice}` };
+  if (!answers.field && !answers.question) return none("laya:no-answer");
+  if (!best) return none("laya:other");
+  if (best.probability < threshold) return none(`laya:unsure:${best.choice}`, best.probability);
+  return {
+    fieldId,
+    key: best.choice as FieldKey,
+    source: "laya",
+    confidence: best.probability,
+    reason: `laya:${best.choice}`,
+  };
 }
 
-/** Pick one option of a dropdown for a known profile value. */
-export function buildOptionRequest(value: string, label: string, options: string[], model: string): LayaRequest {
+/** Ask which option fits a sentence about the applicant ("The applicant is not a protected veteran."). */
+export function buildOptionRequest(about: string, question: string, options: string[], model: string): LayaRequest {
   const criteria: Record<string, string> = {};
   options.forEach((option, index) => {
-    criteria[`o${index}`] = clip(option, 60);
+    criteria[`o${index}`] = clip(option, 80);
   });
   criteria.none = "none of these options fit";
   const request: LayaRequest = {
-    state: clip(`A job application dropdown${label ? ` labeled "${label}"` : ""}.\nThe applicant's answer is: ${value}`, 400),
+    state: clip(`A job application question${question ? `: "${question}"` : ""}.\n${about}`, 600),
     questions: {
       option: {
         type: "choice",
-        instructions: "Which dropdown option matches the applicant's answer?",
+        instructions: "Which option should the applicant choose?",
         criteria,
       },
     },

@@ -25,6 +25,7 @@
         font-size: 12px;
       }
       #result:empty,
+      #reminder[hidden],
       #profile-warning[hidden] {
         display: none;
       }
@@ -49,6 +50,7 @@
     <p id="profile-warning" class="status" data-kind="warn" hidden>Your profile is empty. Add your details first.</p>
     <button id="fill-btn" class="primary">Fill this page</button>
     <p id="result" class="status"></p>
+    <p id="reminder" class="muted" hidden>layafill can make mistakes. Review every field before you submit.</p>
     <div class="legend muted">
       <span><span class="dot" data-kind="ok"></span>rules</span>
       <span><span class="dot" style="background: #2563eb"></span>Laya</span>

@@ -7,6 +7,7 @@ const resultEl = document.querySelector<HTMLParagraphElement>("#result")!;
 const serverDot = document.querySelector<HTMLSpanElement>("#server-dot")!;
 const serverText = document.querySelector<HTMLSpanElement>("#server-text")!;
 const profileWarning = document.querySelector<HTMLParagraphElement>("#profile-warning")!;
+const reminderEl = document.querySelector<HTMLParagraphElement>("#reminder")!;
 
 function setResult(text: string, kind: "ok" | "warn" | "error"): void {
   resultEl.textContent = text;
@@ -41,11 +42,13 @@ function describe(response: FillTabResponse): void {
     setResult(response.error ?? "Could not fill this page", "error");
     return;
   }
-  const { filled, review, total, layaOffline } = response.stats;
+  const { filled, review, total, layaOffline, resumeAttached } = response.stats;
   const parts = [`Filled ${filled} of ${total} fields`];
+  if (resumeAttached) parts.push("resume attached");
   if (review > 0) parts.push(`${review} need you`);
   if (layaOffline) parts.push("Laya offline, rules only");
   setResult(parts.join(" · "), layaOffline || filled === 0 ? "warn" : "ok");
+  reminderEl.hidden = false;
 }
 
 async function fill(debug: boolean): Promise<FillTabResponse> {

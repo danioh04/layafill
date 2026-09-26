@@ -42,6 +42,27 @@ export interface Profile {
   };
   education: EducationEntry[];
   experience: ExperienceEntry[];
+  answers: Answers;
+}
+
+/** "" = not set: the question is left for the user. */
+export type YesNo = "" | "yes" | "no";
+export type YesNoDecline = YesNo | "decline";
+
+/** Answers to common application questions. */
+export interface Answers {
+  workAuthorized: YesNo;
+  needsSponsorship: YesNo;
+  over18: YesNo;
+  willingToRelocate: YesNo;
+  canWorkOnsite: YesNo;
+  earliestStart: DateString;
+  heardAbout: string;
+  gender: string;
+  hispanicLatino: YesNoDecline;
+  race: string;
+  veteran: YesNoDecline;
+  disability: YesNoDecline;
 }
 
 export interface Settings {
@@ -57,11 +78,25 @@ export interface Settings {
   useLaya: boolean;
 }
 
-export type Category = "personal" | "address" | "links" | "education" | "experience";
+export type Category = "personal" | "address" | "links" | "education" | "experience" | "answers";
+
+export type AnswerKey =
+  | "work_authorized"
+  | "needs_sponsorship"
+  | "over_18"
+  | "relocate"
+  | "onsite"
+  | "start_date"
+  | "heard_about"
+  | "gender"
+  | "hispanic_latino"
+  | "race"
+  | "veteran"
+  | "disability";
 
 export type FieldKey =
+  | AnswerKey
   | "first_name"
-  | "middle_name"
   | "middle_name"
   | "last_name"
   | "full_name"
@@ -92,7 +127,8 @@ export type FieldKey =
   | "job_current"
   | "job_description";
 
-export type FieldTag = "input" | "select" | "textarea";
+/** "group" = a set of radio buttons or checkboxes sharing a name, handled as one question. */
+export type FieldTag = "input" | "select" | "textarea" | "group";
 
 export interface FieldContext {
   fieldId: string;
@@ -113,7 +149,7 @@ export interface FieldContext {
   section?: string;
   /** Ids, automation ids and group labels of ancestors, innermost first. */
   groupHint?: string;
-  /** Option texts of a `<select>` (placeholders removed, capped). */
+  /** Option texts of a `<select>` or a radio/checkbox group (placeholders removed, capped). */
   options?: string[];
   maxLength?: number;
 }
@@ -139,6 +175,14 @@ export interface FillStats {
   review: number;
   total: number;
   layaOffline: boolean;
+  resumeAttached: boolean;
+}
+
+/** The stored resume, base64-encoded so it survives extension messaging. */
+export interface StoredFile {
+  name: string;
+  type: string;
+  base64: string;
 }
 
 export interface FieldDebug {
@@ -150,8 +194,9 @@ export interface FieldDebug {
 
 export type Message =
   | { type: "LAYA_CLASSIFY"; payload: LayaDecisionRequest }
-  | { type: "LAYA_MATCH_OPTION"; payload: { value: string; label: string; options: string[] } }
-  | { type: "FILL_ACTIVE_TAB"; debug?: boolean };
+  | { type: "LAYA_MATCH_OPTION"; payload: { about: string; question: string; options: string[] } }
+  | { type: "FILL_ACTIVE_TAB"; debug?: boolean }
+  | { type: "GET_RESUME" };
 
 export type LayaClassifyResponse =
   | { ok: true; decisions: Decision[] }

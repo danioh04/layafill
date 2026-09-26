@@ -1,4 +1,5 @@
 import { runFill } from "../classify/pipeline";
+import { storedFileToFile } from "../resume";
 import { getProfile, getSettings } from "../storage";
 import type {
   Decision,
@@ -8,6 +9,7 @@ import type {
   LayaClassifyResponse,
   LayaMatchOptionResponse,
   Message,
+  StoredFile,
 } from "../types";
 
 class OfflineError extends Error {
@@ -27,10 +29,10 @@ async function classify(fields: FieldContext[]): Promise<Decision[]> {
   return response.decisions;
 }
 
-async function matchOption(value: string, label: string, options: string[]): Promise<{ index: number | null }> {
+async function matchOption(about: string, question: string, options: string[]): Promise<{ index: number | null }> {
   const response = (await chrome.runtime.sendMessage<Message, LayaMatchOptionResponse>({
     type: "LAYA_MATCH_OPTION",
-    payload: { value, label, options },
+    payload: { about, question, options },
   })) as LayaMatchOptionResponse | undefined;
   if (!response) return { index: null };
   if (!response.ok) {
@@ -38,6 +40,14 @@ async function matchOption(value: string, label: string, options: string[]): Pro
     return { index: null };
   }
   return { index: response.index };
+}
+
+async function getResume(): Promise<File | null> {
+  const stored = (await chrome.runtime.sendMessage<Message, StoredFile | null>({ type: "GET_RESUME" })) as
+    | StoredFile
+    | null
+    | undefined;
+  return stored ? storedFileToFile(stored) : null;
 }
 
 export interface FrameResult {
@@ -49,7 +59,7 @@ export interface FrameResult {
 let running = false;
 
 async function run(includeDebug: boolean): Promise<FrameResult> {
-  const empty: FillStats = { filled: 0, review: 0, total: 0, layaOffline: false };
+  const empty: FillStats = { filled: 0, review: 0, total: 0, layaOffline: false, resumeAttached: false };
   if (running) return { stats: empty, error: "Already filling this page" };
   running = true;
   try {
@@ -59,6 +69,7 @@ async function run(includeDebug: boolean): Promise<FrameResult> {
       settings,
       classify,
       matchOption: settings.useLaya ? matchOption : undefined,
+      getResume,
     });
     return includeDebug ? result : { stats: result.stats };
   } catch (error) {

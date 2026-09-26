@@ -1,4 +1,4 @@
-import type { EducationEntry, ExperienceEntry, Profile, Settings } from "../types";
+import type { Answers, EducationEntry, ExperienceEntry, Profile, Settings, YesNo, YesNoDecline } from "../types";
 
 export function emptyEducation(): EducationEntry {
   return { school: "", degree: "", major: "", gpa: "", start: "", end: "" };
@@ -32,6 +32,32 @@ function str(value: unknown): string {
 
 function obj(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function yesNo(value: unknown): YesNo {
+  return value === "yes" || value === "no" ? value : "";
+}
+
+function yesNoDecline(value: unknown): YesNoDecline {
+  return value === "decline" ? value : yesNo(value);
+}
+
+function normalizeAnswers(raw: unknown): Answers {
+  const data = obj(raw);
+  return {
+    workAuthorized: yesNo(data.workAuthorized),
+    needsSponsorship: yesNo(data.needsSponsorship),
+    over18: yesNo(data.over18),
+    willingToRelocate: yesNo(data.willingToRelocate),
+    canWorkOnsite: yesNo(data.canWorkOnsite),
+    earliestStart: normalizeDate(data.earliestStart),
+    heardAbout: str(data.heardAbout),
+    gender: str(data.gender),
+    hispanicLatino: yesNoDecline(data.hispanicLatino),
+    race: str(data.race),
+    veteran: yesNoDecline(data.veteran),
+    disability: yesNoDecline(data.disability),
+  };
 }
 
 /**
@@ -129,6 +155,7 @@ export function normalizeProfile(raw: unknown): Profile {
       current: entry.current === true,
       description: typeof entry.description === "string" ? entry.description : "",
     })),
+    answers: normalizeAnswers(data.answers),
   };
 }
 

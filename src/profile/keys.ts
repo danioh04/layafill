@@ -41,6 +41,19 @@ export const KEYS: Record<FieldKey, KeyInfo> = {
   job_end: { category: "experience", description: "job end date" },
   job_current: { category: "experience", description: "whether this is the current job" },
   job_description: { category: "experience", description: "job description or responsibilities" },
+
+  work_authorized: { category: "answers", description: "whether the applicant is legally authorized to work there" },
+  needs_sponsorship: { category: "answers", description: "whether the applicant needs visa sponsorship" },
+  over_18: { category: "answers", description: "whether the applicant is at least 18 years old" },
+  relocate: { category: "answers", description: "whether the applicant is willing to relocate" },
+  onsite: { category: "answers", description: "whether the applicant can work onsite or in the office" },
+  start_date: { category: "answers", description: "when the applicant can start working" },
+  heard_about: { category: "answers", description: "how the applicant heard about the job" },
+  gender: { category: "answers", description: "the applicant's gender" },
+  hispanic_latino: { category: "answers", description: "whether the applicant is Hispanic or Latino" },
+  race: { category: "answers", description: "the applicant's race or ethnicity" },
+  veteran: { category: "answers", description: "protected veteran status" },
+  disability: { category: "answers", description: "disability status" },
 };
 
 /**
@@ -68,6 +81,24 @@ export const LAYA_KEYS: FieldKey[] = [
 ];
 
 export const OTHER_DESCRIPTION = "something else, such as an essay question, salary, visa or demographics";
+
+/** Keys for the second Laya question, "which application question is this?", asked in the same pass. */
+export const LAYA_ANSWER_KEYS: FieldKey[] = [
+  "work_authorized",
+  "needs_sponsorship",
+  "over_18",
+  "relocate",
+  "onsite",
+  "start_date",
+  "heard_about",
+  "gender",
+  "hispanic_latino",
+  "race",
+  "veteran",
+  "disability",
+];
+
+export const OTHER_ANSWER_DESCRIPTION = "something else, such as an essay, salary or a personal detail";
 
 export function isEntryCategory(category: Category): category is "education" | "experience" {
   return category === "education" || category === "experience";

@@ -1,5 +1,6 @@
 import { checkHealth } from "../classify/laya-client";
 import { emptyEducation, emptyExperience, normalizeProfile, normalizeSettings } from "../profile/profile";
+import { deleteResume, resumeName, saveResume } from "../resume";
 import { getProfile, getSettings, saveProfile, saveSettings } from "../storage";
 import type { EducationEntry, ExperienceEntry, Profile, Settings } from "../types";
 
@@ -28,6 +29,11 @@ function setPath(profile: Profile, path: string, value: string): void {
   target[last] = value;
 }
 
+/** Month-only dates (older profiles) would not show in a date input and be lost on save. */
+function dateInputValue(input: Element, value: string): string {
+  return input instanceof HTMLInputElement && input.type === "date" && /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : value;
+}
+
 function renderEntries(kind: EntryKind, entries: (EducationEntry | ExperienceEntry)[]): void {
   const container = $<HTMLDivElement>(`#${kind}`);
   const template = $<HTMLTemplateElement>(`#${kind}-template`);
@@ -39,11 +45,8 @@ function renderEntries(kind: EntryKind, entries: (EducationEntry | ExperienceEnt
       const value = (entry as unknown as Record<string, unknown>)[input.dataset.entry!];
       if (input instanceof HTMLInputElement && input.type === "checkbox") {
         input.checked = value === true;
-      } else if (input instanceof HTMLInputElement && input.type === "date" && typeof value === "string") {
-        // Month-only dates (older profiles) would not show in a date input and be lost on save.
-        input.value = /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : value;
       } else {
-        input.value = typeof value === "string" ? value : "";
+        input.value = dateInputValue(input, typeof value === "string" ? value : "");
       }
     }
     node.querySelector('[data-action="up"]')!.addEventListener("click", () => moveEntry(kind, index, -1));
@@ -66,7 +69,7 @@ function readEntries(kind: EntryKind): Record<string, string | boolean>[] {
 
 function readProfile(): Profile {
   const profile = normalizeProfile({});
-  for (const input of document.querySelectorAll<HTMLInputElement>("[data-field]")) {
+  for (const input of document.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-field]")) {
     setPath(profile, input.dataset.field!, input.value);
   }
   return normalizeProfile({
@@ -77,8 +80,8 @@ function readProfile(): Profile {
 }
 
 function renderProfile(profile: Profile): void {
-  for (const input of document.querySelectorAll<HTMLInputElement>("[data-field]")) {
-    input.value = getPath(profile, input.dataset.field!) ?? "";
+  for (const input of document.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-field]")) {
+    input.value = dateInputValue(input, getPath(profile, input.dataset.field!) ?? "");
   }
   renderEntries("education", profile.education.length ? profile.education : [emptyEducation()]);
   renderEntries("experience", profile.experience.length ? profile.experience : [emptyExperience()]);
@@ -215,7 +218,30 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+// ---- resume ----
+
+async function renderResume(): Promise<void> {
+  const name = await resumeName();
+  $<HTMLSpanElement>("#resume-name").textContent = name ?? "No resume saved";
+  $<HTMLButtonElement>("#resume-remove").hidden = !name;
+}
+
+$("#resume-choose").addEventListener("click", () => $<HTMLInputElement>("#resume-file").click());
+$<HTMLInputElement>("#resume-file").addEventListener("change", (event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  void saveResume(file)
+    .then(renderResume)
+    .catch((error: unknown) =>
+      setStatus($("#save-status"), error instanceof Error ? error.message : String(error), "error"),
+    );
+});
+$("#resume-remove").addEventListener("click", () => void deleteResume().then(renderResume));
+
 void (async () => {
   renderProfile(await getProfile());
   renderSettings(await getSettings());
+  await renderResume();
 })();

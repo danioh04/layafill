@@ -1,6 +1,7 @@
 import contentScript from "../content/autofill?script&iife";
 import type { FrameResult } from "../content/autofill";
 import { classifyFields, LayaError, matchOption } from "../classify/laya-client";
+import { loadResume } from "../resume";
 import { getSettings } from "../storage";
 import type {
   FieldDebug,
@@ -33,8 +34,8 @@ async function handleMatchOption(
 ): Promise<LayaMatchOptionResponse> {
   try {
     const settings = await getSettings();
-    const { value, label, options } = message.payload;
-    const result = await matchOption(settings, value, label, options);
+    const { about, question, options } = message.payload;
+    const result = await matchOption(settings, about, question, options);
     return { ok: true, ...result };
   } catch (error) {
     return errorResponse(error);
@@ -51,7 +52,7 @@ async function fillTab(tabId: number, includeDebug: boolean): Promise<FillTabRes
       args: [includeDebug],
     });
 
-    const stats: FillStats = { filled: 0, review: 0, total: 0, layaOffline: false };
+    const stats: FillStats = { filled: 0, review: 0, total: 0, layaOffline: false, resumeAttached: false };
     const debug: FieldDebug[] = [];
     const errors: string[] = [];
     for (const { result } of results) {
@@ -61,6 +62,7 @@ async function fillTab(tabId: number, includeDebug: boolean): Promise<FillTabRes
       stats.review += frame.stats.review;
       stats.total += frame.stats.total;
       stats.layaOffline ||= frame.stats.layaOffline;
+      stats.resumeAttached ||= frame.stats.resumeAttached;
       if (frame.debug) debug.push(...frame.debug);
       if (frame.error) errors.push(frame.error);
     }
@@ -102,6 +104,11 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
       return true;
     case "FILL_ACTIVE_TAB":
       void fillActiveTab(message.debug === true).then(sendResponse);
+      return true;
+    case "GET_RESUME":
+      void loadResume()
+        .catch(() => null)
+        .then(sendResponse);
       return true;
     default:
       return false;

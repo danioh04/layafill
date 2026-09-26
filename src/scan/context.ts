@@ -1,5 +1,5 @@
 import type { FieldContext, FieldTag } from "../types";
-import { parentElementAcrossShadow, type FillableElement } from "./scanner";
+import { parentElementAcrossShadow, type ChoiceGroup, type FillableElement } from "./scanner";
 import { cleanText, isPlaceholderOption, textWithoutControls } from "./text";
 
 const HEADING_SELECTOR = [
@@ -29,17 +29,8 @@ function byIdInRoot(element: Element, id: string): Element | null {
 }
 
 function getLabel(element: FillableElement): string {
-  const labelledBy = element.getAttribute("aria-labelledby");
-  if (labelledBy) {
-    const text = labelledBy
-      .split(/\s+/)
-      .map((id) => byIdInRoot(element, id))
-      .filter((node): node is Element => node !== null && node !== element)
-      .map((node) => textWithoutControls(node))
-      .join(" ");
-    const cleaned = cleanText(text);
-    if (cleaned) return cleaned;
-  }
+  const labelledBy = labelledByText(element);
+  if (labelledBy) return labelledBy;
 
   const labels = element.labels ? Array.from(element.labels) : [];
   if (labels.length === 0 && element.id) {
@@ -57,7 +48,7 @@ function getLabel(element: FillableElement): string {
  * Text right before the field: preceding siblings in its parent, climbing a few
  * levels while nothing is found (label divs are often cousins, not siblings).
  */
-function getNearbyText(element: FillableElement): string {
+function getNearbyText(element: Element): string {
   let node: Element = element;
   for (let depth = 0; depth < 4; depth += 1) {
     const parent = parentElementAcrossShadow(node);
@@ -84,8 +75,8 @@ function precedes(a: Node, b: Node): boolean {
 }
 
 /** Nearest heading before the field, or the legend of its fieldset. */
-function getSection(element: FillableElement, headings: Element[]): string {
-  const fieldset = element.closest("fieldset");
+function getSection(element: Element, headings: Element[], useLegend = true): string {
+  const fieldset = useLegend ? element.closest("fieldset") : null;
   const legend = fieldset?.querySelector(":scope > legend");
   if (legend) {
     const text = cleanText(textWithoutControls(legend), 120);
@@ -104,7 +95,7 @@ function getSection(element: FillableElement, headings: Element[]): string {
   return best ? cleanText(textWithoutControls(best), 120) : "";
 }
 
-function getGroupHint(element: FillableElement): string {
+function getGroupHint(element: Element): string {
   const hints: string[] = [];
   let node = parentElementAcrossShadow(element);
   for (let depth = 0; node && depth < MAX_ANCESTOR_DEPTH; depth += 1) {
@@ -137,6 +128,60 @@ export function collectHeadings(root: ParentNode = document): Element[] {
   return Array.from(root.querySelectorAll(HEADING_SELECTOR)).filter(
     (heading) => cleanText(heading.textContent).length > 0,
   );
+}
+
+function labelledByText(element: Element): string {
+  const ids = element.getAttribute("aria-labelledby");
+  if (!ids) return "";
+  return cleanText(
+    ids
+      .split(/\s+/)
+      .map((id) => byIdInRoot(element, id))
+      .filter((node): node is Element => node !== null)
+      .map((node) => textWithoutControls(node))
+      .join(" "),
+  );
+}
+
+/** The question a radio/checkbox group answers: legend, ARIA group label, or the text around the options. */
+function getGroupQuestion(group: ChoiceGroup, optionLabels: string[]): string {
+  const { container } = group;
+  const fieldset = container.closest("fieldset");
+  const legend = fieldset?.querySelector(":scope > legend");
+  if (legend && group.inputs.every((input) => fieldset!.contains(input))) {
+    const text = cleanText(textWithoutControls(legend));
+    if (text) return text;
+  }
+
+  const ariaGroup = container.closest("[role=radiogroup], [role=group]");
+  if (ariaGroup) {
+    const text = labelledByText(ariaGroup) || cleanText(ariaGroup.getAttribute("aria-label"));
+    if (text) return text;
+  }
+
+  // "<div><p>Question?</p><label><input> Yes</label>…</div>": the container's text minus the options.
+  let text = textWithoutControls(container).replace(/\s+/g, " ");
+  for (const option of optionLabels) {
+    if (option) text = text.replace(option, " ");
+  }
+  const remaining = cleanText(text);
+  if (remaining && remaining.length <= 300) return remaining;
+  return getNearbyText(container);
+}
+
+export function buildGroupContext(group: ChoiceGroup, fieldId: string, headings: Element[]): FieldContext {
+  const first = group.inputs[0];
+  const optionLabels = group.inputs.map((input) => getLabel(input) || cleanText(input.value, 80));
+  const context: FieldContext = { fieldId, tag: "group", inputType: group.type, options: optionLabels };
+  const name = first.getAttribute("name");
+  if (name) context.name = name;
+  const question = getGroupQuestion(group, optionLabels);
+  if (question) context.label = question;
+  const section = getSection(group.container, headings, false);
+  if (section) context.section = section;
+  const hint = getGroupHint(group.container);
+  if (hint) context.groupHint = hint;
+  return context;
 }
 
 export function buildContext(element: FillableElement, fieldId: string, headings: Element[]): FieldContext {

@@ -1,7 +1,9 @@
 import { isMonthOrYearSelect } from "../classify/rules";
+import { KEYS } from "../profile/keys";
 import { MONTH_NAMES } from "../profile/profile";
 import { normalize } from "../scan/text";
-import type { DateString, FieldContext, FieldKey, Profile } from "../types";
+import type { AnswerKey, Answers, DateString, FieldContext, FieldKey, Profile, YesNoDecline } from "../types";
+import { isDecline, type Polarity } from "./answers";
 import type { MatchKind } from "./match-option";
 import { stateAbbreviation, stateName } from "./synonyms";
 
@@ -14,7 +16,16 @@ export type FillValue =
       alternatives: string[];
       match: MatchKind;
     }
-  | { kind: "checked"; checked: boolean };
+  | { kind: "checked"; checked: boolean }
+  | {
+      kind: "answer";
+      /** The profile's yes/no/decline answer, when the question has one. */
+      fact: Polarity | null;
+      /** What to type into a text field, or the answer to look for among options. */
+      text: string;
+      /** A sentence about the applicant, for Laya when options must be read for meaning. */
+      statement: string;
+    };
 
 function text(value: string, alternatives: string[] = [], match: MatchKind = "plain"): FillValue | null {
   const trimmed = value.trim();
@@ -114,8 +125,82 @@ function formatMiddleName(middleName: string, ctx: FieldContext): FillValue | nu
   return text(wantsInitial ? name.charAt(0).toUpperCase() : name);
 }
 
+/** Yes/no questions: the profile field and how to say each answer about the applicant. */
+const YES_NO_ANSWERS: Partial<Record<AnswerKey, { field: keyof Answers; yes: string; no: string; decline?: string }>> = {
+  work_authorized: {
+    field: "workAuthorized",
+    yes: "is legally authorized to work in the United States",
+    no: "is not legally authorized to work in the United States",
+  },
+  needs_sponsorship: {
+    field: "needsSponsorship",
+    yes: "will need visa sponsorship now or in the future",
+    no: "will not need visa sponsorship now or in the future",
+  },
+  over_18: { field: "over18", yes: "is 18 years old or older", no: "is younger than 18" },
+  relocate: { field: "willingToRelocate", yes: "is willing to relocate", no: "is not willing to relocate" },
+  onsite: { field: "canWorkOnsite", yes: "can work onsite in the office", no: "cannot work onsite in the office" },
+  hispanic_latino: {
+    field: "hispanicLatino",
+    yes: "is Hispanic or Latino",
+    no: "is not Hispanic or Latino",
+    decline: "prefers not to say whether they are Hispanic or Latino",
+  },
+  veteran: {
+    field: "veteran",
+    yes: "is a protected veteran",
+    no: "is not a protected veteran",
+    decline: "prefers not to disclose veteran status",
+  },
+  disability: {
+    field: "disability",
+    yes: "has a disability",
+    no: "does not have a disability",
+    decline: "prefers not to disclose disability status",
+  },
+};
+
+function answer(fact: Polarity | null, textValue: string, statement: string): FillValue {
+  return { kind: "answer", fact, text: textValue, statement: `The applicant ${statement}.` };
+}
+
+/** Values for application questions (work authorization, EEO, start date...). */
+function answerValue(key: AnswerKey, answers: Answers, ctx: FieldContext): FillValue | null {
+  const yesNo = YES_NO_ANSWERS[key];
+  if (yesNo) {
+    const value = answers[yesNo.field] as YesNoDecline;
+    if (!value) return null;
+    if (value === "decline") return answer("decline", "", yesNo.decline ?? "prefers not to answer");
+    return answer(value, value === "yes" ? "Yes" : "No", yesNo[value]);
+  }
+  switch (key) {
+    case "start_date": {
+      const date = formatDate(answers.earliestStart, ctx);
+      if (!date || date.kind !== "text") return null;
+      const [year, month, day] = answers.earliestStart.split("-");
+      const spoken = `${capitalize(MONTH_NAMES[Number(month) - 1])} ${day ? `${Number(day)}, ` : ""}${year}`;
+      return answer(null, date.text, `can start on ${spoken}`);
+    }
+    case "heard_about":
+      return answers.heardAbout ? answer(null, answers.heardAbout, `heard about the job through ${answers.heardAbout}`) : null;
+    case "gender":
+      if (!answers.gender) return null;
+      return isDecline(answers.gender)
+        ? answer("decline", answers.gender, "prefers not to disclose their gender")
+        : answer(null, answers.gender, `is ${answers.gender}`);
+    case "race":
+      if (!answers.race) return null;
+      return isDecline(answers.race)
+        ? answer("decline", answers.race, "prefers not to disclose their race")
+        : answer(null, answers.race, `is ${answers.race}`);
+    default:
+      return null;
+  }
+}
+
 /** The profile value for `key`, formatted for this field. Null when the profile has nothing to fill. */
 export function valueFor(key: FieldKey, profile: Profile, entry: number, ctx: FieldContext): FillValue | null {
+  if (KEYS[key].category === "answers") return answerValue(key as AnswerKey, profile.answers, ctx);
   const education = profile.education[entry];
   // "Current company" means the job marked current, not simply the latest one.
   const experience =
@@ -184,5 +269,7 @@ export function valueFor(key: FieldKey, profile: Profile, entry: number, ctx: Fi
       return experience ? { kind: "checked", checked: experience.current } : null;
     case "job_description":
       return experience ? text(experience.description) : null;
+    default:
+      return null;
   }
 }

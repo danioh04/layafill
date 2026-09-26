@@ -23,6 +23,8 @@ export function cleanText(text: string | null | undefined, max = 200): string {
 export function normalize(text: string | null | undefined): string {
   if (!text) return "";
   return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // "Résumé" -> "Resume"
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
     .replace(/([a-zA-Z])(\d)/g, "$1 $2")

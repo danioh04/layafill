@@ -136,8 +136,132 @@
           <h2>Experience</h2>
           <button id="add-experience">Add job</button>
         </div>
-        <p class="muted">Most recent first. The first entry fills "Current company" fields.</p>
+        <p class="muted">Most recent first. "Current company" fields use the job marked "I currently work here".</p>
         <div id="experience"></div>
+      </section>
+
+      <section>
+        <h2>Resume</h2>
+        <p class="muted">Attached to resume upload fields automatically. It stays in this browser.</p>
+        <div class="row">
+          <span id="resume-name" class="muted">No resume saved</span>
+          <button id="resume-choose">Choose PDF…</button>
+          <button id="resume-remove" hidden>Remove</button>
+          <input id="resume-file" type="file" accept=".pdf,.doc,.docx,application/pdf" hidden />
+        </div>
+      </section>
+
+      <section>
+        <h2>Application questions</h2>
+        <p class="muted">Leave a question unset to answer it yourself on each application.</p>
+        <div class="grid">
+          <label
+            >Legally authorized to work in the US?
+            <select data-field="answers.workAuthorized">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label
+            >Need visa sponsorship, now or in the future?
+            <select data-field="answers.needsSponsorship">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label
+            >18 or older?
+            <select data-field="answers.over18">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label
+            >Willing to relocate?
+            <select data-field="answers.willingToRelocate">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label
+            >Able to work onsite / in office?
+            <select data-field="answers.canWorkOnsite">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label>Earliest start date <input data-field="answers.earliestStart" type="date" /></label>
+          <label
+            >How you usually hear about jobs
+            <input data-field="answers.heardAbout" list="heard-about-list" placeholder="LinkedIn" autocomplete="off" />
+          </label>
+        </div>
+        <h3>Voluntary self-identification (EEO)</h3>
+        <div class="grid">
+          <label
+            >Gender
+            <input data-field="answers.gender" list="gender-list" autocomplete="off" />
+          </label>
+          <label
+            >Hispanic or Latino?
+            <select data-field="answers.hispanicLatino">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="decline">Decline to answer</option>
+            </select>
+          </label>
+          <label
+            >Race
+            <input data-field="answers.race" list="race-list" autocomplete="off" />
+          </label>
+          <label
+            >Protected veteran?
+            <select data-field="answers.veteran">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="decline">Decline to answer</option>
+            </select>
+          </label>
+          <label
+            >Disability?
+            <select data-field="answers.disability">
+              <option value="">Not set</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="decline">Decline to answer</option>
+            </select>
+          </label>
+        </div>
+        <datalist id="heard-about-list">
+          <option value="LinkedIn"></option>
+          <option value="Indeed"></option>
+          <option value="Handshake"></option>
+          <option value="Company website"></option>
+          <option value="Referral"></option>
+          <option value="Career fair"></option>
+        </datalist>
+        <datalist id="gender-list">
+          <option value="Male"></option>
+          <option value="Female"></option>
+          <option value="Non-binary"></option>
+          <option value="Decline to answer"></option>
+        </datalist>
+        <datalist id="race-list">
+          <option value="American Indian or Alaska Native"></option>
+          <option value="Asian"></option>
+          <option value="Black or African American"></option>
+          <option value="Native Hawaiian or Other Pacific Islander"></option>
+          <option value="White"></option>
+          <option value="Two or More Races"></option>
+          <option value="Decline to answer"></option>
+        </datalist>
       </section>
 
       <section>

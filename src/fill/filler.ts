@@ -116,6 +116,13 @@ export async function fillCombobox(
   return false;
 }
 
+/** Pick one radio button, or tick one checkbox of a group, the way a user click would. */
+export function fillChoice(input: HTMLInputElement): boolean {
+  if (input.disabled) return false;
+  if (!input.checked) input.click();
+  return input.checked;
+}
+
 export function fillCheckbox(element: HTMLInputElement, checked: boolean): boolean {
   if (element.disabled) return false;
   if (element.checked !== checked) {
